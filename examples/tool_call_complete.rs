@@ -1,0 +1,31 @@
+
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
+use ai_agent::{constant::DEEPSEEK_FLASH_MODEL, llm::*, tools::tools};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // 1. 加载环境变量
+    dotenvy::dotenv()?;
+
+    // 2. 配置 tracing tracing 配置
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)?;
+
+    let tools = tools();
+    
+    let plan = chat_complete(
+        DEEPSEEK_FLASH_MODEL,
+        Some("你是一个全能的助手"),
+        Some("23*100"),
+        tools.clone(),
+    ).await?;
+    tracing::info!("最终结果: {:#?}", plan);
+
+    Ok(())
+}
+
+
