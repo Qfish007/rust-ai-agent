@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 pub fn calculator(operator:&str,first_number:f64,second_number:f64)->anyhow::Result<f64,String>{
@@ -14,12 +15,13 @@ pub fn calculator(operator:&str,first_number:f64,second_number:f64)->anyhow::Res
     }
 }
 
-#[derive(Debug,Deserialize)]
+#[derive(Debug,Deserialize,JsonSchema)]
 pub struct CalculatorArgs{
     pub operator:String,
     pub first_number:f64,
     pub second_number:f64,
 }
+
 
 impl CalculatorArgs {
     pub fn name()->&'static str{

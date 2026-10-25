@@ -1,7 +1,7 @@
 
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use ai_agent::{constant::DEEPSEEK_FLASH_MODEL, llm::*, tools::tools};
+use ai_agent::{constant::DEEPSEEK_FLASH_MODEL, llm::*, tools::{build_toolbox, tools}};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,15 +15,9 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::subscriber::set_global_default(subscriber)?;
 
-    let tools = tools();
+    // let tools = tools();
     
-    // let plan = chat_complete(
-    //     DEEPSEEK_FLASH_MODEL,
-    //     Some("你是一个全能的助手"),
-    //     Some("23*100"),
-    //     tools.clone(),
-    // ).await?;
-    // tracing::info!("最终结果: {:#?}", plan);
+        let toolbox = build_toolbox();
 
        let result = chat_complete(
         DEEPSEEK_FLASH_MODEL,
@@ -33,10 +27,9 @@ async fn main() -> anyhow::Result<()> {
         重要:当工具返回搜索结果时，
         你必须要直接使用这些结果来回答，
         不要说我不知道。你的数据可能已经过时，
-        请优先使用信任工具返回的内容。
-        调用工具的时候，只执行一次调用，不要重复调用。"#),
+        请优先使用信任工具返回的内容。"#),
         Some("厦门市最新关于翔安机场的新闻"),
-        tools.clone(),
+        &toolbox,
     ).await?;
     tracing::info!("最终结果: {:#?}", result);
 
