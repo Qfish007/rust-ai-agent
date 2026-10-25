@@ -20,3 +20,9 @@ pub struct CalculatorArgs{
     pub first_number:f64,
     pub second_number:f64,
 }
+
+impl CalculatorArgs {
+    pub fn name()->&'static str{
+        "calculator"
+    }
+}

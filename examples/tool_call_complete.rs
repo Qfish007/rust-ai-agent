@@ -17,13 +17,27 @@ async fn main() -> anyhow::Result<()> {
 
     let tools = tools();
     
-    let plan = chat_complete(
+    // let plan = chat_complete(
+    //     DEEPSEEK_FLASH_MODEL,
+    //     Some("你是一个全能的助手"),
+    //     Some("23*100"),
+    //     tools.clone(),
+    // ).await?;
+    // tracing::info!("最终结果: {:#?}", plan);
+
+       let result = chat_complete(
         DEEPSEEK_FLASH_MODEL,
-        Some("你是一个全能的助手"),
-        Some("23*100"),
+        Some(r#"你是一个全能的助手。
+        今天是2026年10月25日。
+        你可以使用工具来搜索最新信息。
+        重要:当工具返回搜索结果时，
+        你必须要直接使用这些结果来回答，
+        不要说我不知道。你的数据可能已经过时，
+        请优先使用信任工具返回的内容。"#),
+        Some("厦门市今天的天气"),
         tools.clone(),
     ).await?;
-    tracing::info!("最终结果: {:#?}", plan);
+    tracing::info!("最终结果: {:#?}", result);
 
     Ok(())
 }
