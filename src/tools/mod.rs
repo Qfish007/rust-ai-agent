@@ -1,9 +1,7 @@
+use async_openai::types::chat::ChatCompletionTools;
+
 pub mod calculator;
 pub mod web_search;
-
-
-
-use async_openai::types::chat::ChatCompletionTools;
 
 pub use calculator::*;
 pub use web_search::*;

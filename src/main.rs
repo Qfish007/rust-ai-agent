@@ -6,6 +6,7 @@ use ai_agent::{llm::*, constant::DEEPSEEK_FLASH_MODEL};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    println!("Hello, world!");
     dotenvy::dotenv()?;
 
     let subscriber = FmtSubscriber::builder()
