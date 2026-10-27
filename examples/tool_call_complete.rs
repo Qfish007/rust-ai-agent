@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
 
     // let tools = tools();
     
-        let toolbox = build_toolbox();
+        let toolbox = build_toolbox().await?;
 
        let result = chat_complete(
         DEEPSEEK_FLASH_MODEL,

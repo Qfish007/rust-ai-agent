@@ -36,11 +36,12 @@ pub async fn chat_complete(
     loop {
         // 发送请求
         let response = make_request(&client, model, &messages, &tool_box).await?;
-        tracing::info!("response: {:#?}", response);
+        // tracing::info!("response: {:#?}", response);
 
         // 拿到消息
         let response_message = get_response_message(response)?;
 
+        // 检查是否有工具调用
         match check_call_tooling(&response_message, &mut messages, tool_box).await? {
             // 没有工具调用，模型给出了最终答案
             Some(content) => return Ok(content),
@@ -157,7 +158,7 @@ async fn check_call_tooling(
     tool_box: &ToolBox,
 ) -> anyhow::Result<Option<String>> {
 
-    // 检查是否有工具调用
+    // 检查是否有工具调用, 如果没有, 则返回模型的最终回答
     let Some(tool_calls) = response_message.tool_calls.clone() else {
         let content = response_message
             .content
@@ -166,7 +167,7 @@ async fn check_call_tooling(
         return Ok(Some(content));
     };
 
-    // 将需要调用的工具调用添加到消息队列中
+    // 将返回的响应消息（需要调用的工具信息）添加到消息队列中
     add_tool_message(messages, &tool_calls)?;
 
     // 必须为每个 tool_call 都追加一条结果，否则下一轮请求会被 API 拒绝
@@ -196,6 +197,8 @@ async fn check_call_tooling(
                     msg
                 }
             };
+
+            // 将工具调用结果添加到消息队列中
             add_tool_result_message(messages, &function_call.id, &tool_result)?;
         }
     }

@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
 
     // let tools = tools();
     
-        let toolbox = build_toolbox();
+        let toolbox = build_toolbox().await?;
 
         let system_prompt = concat!(
             "你是一个全能的助手。",
@@ -39,6 +39,20 @@ async fn main() -> anyhow::Result<()> {
             DEEPSEEK_FLASH_MODEL,
             Some(system_prompt),
             Some("计算123456乘以654321等于多少"),
+            &toolbox).await?;
+        tracing::info!("最终结果: {:#?}", result);
+
+        let result = chat_complete(
+            DEEPSEEK_FLASH_MODEL,
+            Some(system_prompt),
+            Some(r"我想买一台mac mini m4
+            1.搜索mac mini m4的最新价格
+            2.查询我过去三个月Software分装支出
+            3.计算：
+              - mini m4是Software支出的多少倍
+              - 如果每个月节省500元，需要多少个月才能买得起mini m4？
+            4.根据我的消费情况，给我一个是否应该购买的建议
+            "),
             &toolbox).await?;
         tracing::info!("最终结果: {:#?}", result);
 

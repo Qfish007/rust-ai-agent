@@ -8,7 +8,7 @@
  */
 mod execute;
 mod definition;
-mod r#impl;
+mod r#impl; // impl是关键词，所以用 r#impl 来避免冲突
 
 #[allow(unused_imports,)]
 pub use definition::calculator_tool_definition;
