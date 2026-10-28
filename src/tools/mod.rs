@@ -34,7 +34,9 @@ pub async fn build_toolbox() -> anyhow::Result<ToolBox> {
         tools.push(Box::new(McpTool::new(mcp_client.clone(), tool)));
     }
     
-    Ok(tools.into_iter().map(|tool| (tool.name().to_string(), tool)).collect())
+    Ok(tools
+        .into_iter()
+        .map(|tool| (tool.name().to_string(), tool)).collect())
         
 }
 
