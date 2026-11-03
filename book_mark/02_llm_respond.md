@@ -1,5 +1,5 @@
-# LLM 响应
-```rust
+# LLM 响应示例1
+```rust 
 CreateChatCompletionResponse {
     id: "7461e1ce-738f-45d4-9fd0-631eceb04e16",
     choices: [
@@ -62,3 +62,4 @@ CreateChatCompletionResponse {
     moderation: None,
 }
 ```
+
