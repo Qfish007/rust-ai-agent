@@ -1,14 +1,12 @@
-
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 // 定义想要返回的结构体
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ActionPlan {
     pub plan: String,
     pub steps: Vec<ActionStep>,
-    pub difficulty:Difficulty,
+    pub difficulty: Difficulty,
     pub estimated_minutes: u32,
 }
 

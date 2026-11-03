@@ -1,7 +1,6 @@
-
+use ai_agent::{constant::DEEPSEEK_FLASH_MODEL, llm::*};
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use ai_agent::{llm::*, constant::DEEPSEEK_FLASH_MODEL};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -16,7 +15,8 @@ async fn main() -> anyhow::Result<()> {
         DEEPSEEK_FLASH_MODEL,
         Some("你是一个全能的助手"),
         Some("我要去北京,如何安排"),
-    ).await?;
+    )
+    .await?;
 
     tracing::info!("response: {:#?}", response);
 

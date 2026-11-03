@@ -8,7 +8,7 @@ anyhow = "1.0.102"
 async-openai = { version = "0.42.2", features = ["chat-completion"] }
 async-stream = "0.3.6"
 async-trait = "0.1.92"
-backon = "1.6.0"
+backon = "1.6.0"# backon 处理重试
 dotenvy = "0.15.7"
 futures = "0.3.34"
 reqwest = { version = "0.13.5", features = ["json"] }

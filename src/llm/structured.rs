@@ -1,8 +1,6 @@
 use async_openai::types::chat::{
-    ChatCompletionRequestSystemMessageArgs,
-    ChatCompletionRequestUserMessageArgs,
-    CreateChatCompletionRequestArgs,
-    ResponseFormat,
+    ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+    CreateChatCompletionRequestArgs, ResponseFormat,
 };
 
 use crate::models::ActionPlan;
@@ -10,7 +8,7 @@ use crate::models::ActionPlan;
 pub async fn chat_complete_structured(
     model: &str,
     system: Option<&str>,
-    prompt: Option<&str>
+    prompt: Option<&str>,
 ) -> anyhow::Result<ActionPlan> {
     // 创建 AI 客户端
     let client = async_openai::Client::new();
@@ -21,14 +19,20 @@ pub async fn chat_complete_structured(
     // 将系统信息添加到消息队列中
     if let Some(system) = system {
         messages.push(
-            ChatCompletionRequestSystemMessageArgs::default().content(system).build()?.into()
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content(system)
+                .build()?
+                .into(),
         );
     }
 
     // 将用户提示添加到消息队列中
     if let Some(prompt) = prompt {
         messages.push(
-            ChatCompletionRequestUserMessageArgs::default().content(prompt).build()?.into()
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(prompt)
+                .build()?
+                .into(),
         );
     }
 
@@ -65,7 +69,8 @@ pub async fn chat_complete_structured(
     tracing::info!("response: {:#?}", response);
 
     // 从响应中提取内容
-    let plan: ActionPlan = response.choices
+    let plan: ActionPlan = response
+        .choices
         .into_iter()
         .next()
         .and_then(|c| c.message.content)

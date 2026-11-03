@@ -63,3 +63,31 @@ CreateChatCompletionResponse {
 }
 ```
 
+# LLM 响应示例2
+```rust
+CreateChatCompletionStreamResponse { 
+    id: "ca5e36e0-28c6-4317-94da-99731491aa3e", 
+    choices: [
+        ChatChoiceStream { 
+            index: 0, 
+            delta: ChatCompletionStreamResponseDelta { 
+                content: Some("。\n\n"), 
+                function_call: None, 
+                tool_calls: None, 
+                role: None, 
+                refusal: None 
+            }, 
+            finish_reason: None, 
+            logprobs: None 
+        }
+    ], 
+    created: 1793684468, 
+    model: "deepseek-flash", 
+    service_tier: None, 
+    system_fingerprint: Some("bc19ba97cbe016479903222bb1578db6"), 
+    object: "chat.completion.chunk", 
+    usage: None, 
+    obfuscation: None, 
+    moderation: None 
+}
+```
