@@ -73,7 +73,7 @@ pub async fn chat_stream_with_rety(
             match result {
                 Ok(txt) => {
                     output.push_str(&txt);
-                    print!("{}", txt);
+                    print!("{}", txt); 
                 }
                 Err(e) => {
                     tracing::error!("Error: {:?}", e);
