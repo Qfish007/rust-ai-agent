@@ -12,10 +12,10 @@ async fn main() -> anyhow::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    let response = chat_complete(
+    let response = chat_complete_structured(
         DEEPSEEK_FLASH_MODEL,
         Some("你是一个全能的助手"),
-        Some("中国的首都在哪里"),
+        Some("我要去北京,如何安排"),
     ).await?;
 
     tracing::info!("response: {:#?}", response);
