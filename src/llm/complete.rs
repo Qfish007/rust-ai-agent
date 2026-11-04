@@ -4,13 +4,13 @@ use async_openai::types::chat::{
     ChatCompletionRequestUserMessageArgs, ChatCompletionTools, CreateChatCompletionRequestArgs,
 };
 
-use crate::tools::{CalculatorArgs, WebSearchArgs, calculator, search_web};
+use crate::tools::*;
 
 pub async fn chat_complete(
     model: &str,
     system: Option<&str>,
     prompt: Option<&str>,
-    tools: Vec<ChatCompletionTools>,
+    tool_box: &ToolBox,
 ) -> anyhow::Result<String> {
     // 创建 AI 客户端
     let client = async_openai::Client::new();
@@ -36,107 +36,90 @@ pub async fn chat_complete(
         );
     }
 
-    // 构建请求
-    let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
-        .messages(messages.clone())
-        .tools(tools.clone())
-        .max_tokens(2048u32)
-        .build()?;
-
-    // 发送请求
-    let response = client.chat().create(request).await?;
-    tracing::info!("response: {:#?}", response);
-
-    let message = response
-        .choices
-        .into_iter()
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("No message found in response"))?
-        .message;
-
-    if let Some(tool_calls) = message.tool_calls {
-
-        messages.push(
-            ChatCompletionRequestAssistantMessageArgs::default()
-                .tool_calls(tool_calls.clone())
-                .build()?
-                .into(),
-        );
-
-        for tool_call in tool_calls {
-            match tool_call {
-                ChatCompletionMessageToolCalls::Function(function_call) => {
-                    let fun_name = function_call.function.name;
-                    let fun_args = function_call.function.arguments;
-                    tracing::info!("fun_name: {}, fun_args: {}", fun_name, fun_args);
-
-                    if fun_name == CalculatorArgs::name() {
-                        let args: CalculatorArgs = serde_json::from_str(&fun_args)?;
-                        let result = calculator(&args.operator, args.first_number, args.second_number);
-
-                        let tool_result = match result {
-                            Ok(result) => result.to_string(),
-                            Err(error) => error.to_string(),
-                        };
-
-                        messages.push(
-                            ChatCompletionRequestToolMessageArgs::default()
-                                .tool_call_id(function_call.id.clone())
-                                .content(tool_result)
-                                .build()?
-                                .into(),
-                        );
-                    }else if fun_name == WebSearchArgs::name() {
-                        let args: WebSearchArgs = serde_json::from_str(&fun_args)?;
-                        let result = search_web(args).await;
-                        // tracing::info!("搜索结果: {:#?}", result);
-                        let tool_result = match result{
-                            Ok(result) => serde_json::to_string(&result)?,
-                            Err(error) => error.to_string(),
-                        };
-
-                        tracing::info!("搜索结果: {}", tool_result);
-                        // 将工具调用结果添加到消息队列中
-                        messages.push(
-                            ChatCompletionRequestToolMessageArgs::default()
-                                .tool_call_id(function_call.id.clone())
-                                .content(tool_result)
-                                .build()?
-                                .into(),
-                        );
-                    }
+    loop {
+        let tool_definitions: Vec<ChatCompletionTools> = tool_box
+            .values()
+            .filter_map(|t| match t.definition() {
+                Ok(def) => Some(def),
+                Err(e) => {
+                    tracing::error!("Error in tool definition: {:?}", e);
+                    None
                 }
-                _ => {
-                    tracing::info!("unsupport tool_call: {:#?}", tool_call);
-                }
-            }
-        }
+            })
+            .collect();
 
-        // 将信息在发送给模型
+        // 构建请求
         let request = CreateChatCompletionRequestArgs::default()
             .model(model)
             .messages(messages.clone())
-            .tools(tools.clone())
+            .tools(tool_definitions.clone())
             .max_tokens(2048u32)
             .build()?;
 
+        // 发送请求
         let response = client.chat().create(request).await?;
-        // tracing::info!("🌺结果: {:#?}", response);
-        let content = response
+        tracing::info!("🌹llm response: {:#?}🌹", response);
+
+        let message = response
             .choices
             .into_iter()
             .next()
-            .and_then(|choice| choice.message.content)
-            .ok_or_else(|| anyhow::anyhow!("No content found in response"))?;
-        
-        return Ok(content);
+            .ok_or_else(|| anyhow::anyhow!("No message found in response"))?
+            .message;
+
+        // 4 处理工具调用结果
+        if let Some(tool_calls) = message.tool_calls {
+            // 4.1 添加工具调用到消息队列中
+            messages.push(
+                ChatCompletionRequestAssistantMessageArgs::default()
+                    .tool_calls(tool_calls.clone())
+                    .build()?
+                    .into(),
+            );
+
+            // 4.2 遍历工具调用结果，执行工具调用
+            for tool_call in tool_calls {
+                if let ChatCompletionMessageToolCalls::Function(function_call) = tool_call {
+                    let fun_name = &function_call.function.name;
+                    let fun_args = &function_call.function.arguments;
+                    tracing::info!("fun_name: {}, fun_args: {}", fun_name, fun_args);
+
+                    let tool_result = match tool_box.get(fun_name) {
+                        Some(tool) => {
+                            match tool.execute(fun_args).await {
+                                Ok(result) => {
+                                    tracing::info!("tool 结果: {:#?}", result);
+                                    result
+                                }
+                                Err(error) => {
+                                    let msg = format!("tool execution error: {}", error);
+                                    // tracing::error!("Error in tool execution: {:?}", msg);
+                                    msg
+                                }
+                            }
+                        }
+                        None => {
+                            let msg = format!("tool not found: {}", fun_name);
+                            // tracing::error!("Error in tool execution: {:?}", msg);
+                            msg
+                        }
+                    };
+
+                    messages.push(
+                        ChatCompletionRequestToolMessageArgs::default()
+                            .tool_call_id(function_call.id)
+                            .content(tool_result)
+                            .build()?
+                            .into(),
+                    );
+                }
+            }
+        } else {
+            let content = message
+                .content
+                .ok_or_else(|| anyhow::anyhow!("No content found in response"))?;
+
+            return Ok(content);
+        }
     }
-
-    // 没有工具调用，直接返回消息内容
-    let content = message
-        .content
-        .ok_or_else(|| anyhow::anyhow!("No content found in response"))?;
-
-    Ok(content)
 }

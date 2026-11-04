@@ -1,6 +1,6 @@
 use anyhow::Context;
 use schemars::JsonSchema;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct WebSearchArgs {
@@ -78,11 +78,11 @@ pub async fn search_web(args: WebSearchArgs) -> anyhow::Result<WebSearchOutput> 
         include_answer: true,
     };
 
-    let resp = reqwest::Client
-        ::new()
+    let resp = reqwest::Client::new()
         .post("https://api.tavily.com/search")
         .json(&body)
-        .send().await
+        .send()
+        .await
         .context("send request to tavily failed")?;
 
     if !resp.status().is_success() {
@@ -90,7 +90,7 @@ pub async fn search_web(args: WebSearchArgs) -> anyhow::Result<WebSearchOutput> 
     }
 
     let parsed: TavilyResponse = resp.json().await.context("parse response body failed")?;
-    
+
     Ok(WebSearchOutput {
         answer: parsed.answer,
         results: parsed.results,

@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::subscriber::set_global_default(subscriber)?;
 
-    let toolbox = tools();
+    let toolbox = build_toolbox().await?;
 
     let result = chat_complete(
         DEEPSEEK_FLASH_MODEL,
@@ -28,8 +28,9 @@ async fn main() -> anyhow::Result<()> {
         请优先使用信任工具返回的内容。"#,
         ),
         Some("今天厦门翔安机场施工进度"),
-        toolbox,
-    ).await?;
+        &toolbox,
+    )
+    .await?;
     tracing::info!("最终结果: {:#?}", result);
 
     Ok(())
