@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
         不要说我不知道。你的数据可能已经过时，
         请优先使用信任工具返回的内容。"#,
         ),
-        Some("今天厦门最热的新闻"),
+        Some("今天厦门翔安机场施工进度"),
         toolbox,
     ).await?;
     tracing::info!("最终结果: {:#?}", result);

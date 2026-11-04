@@ -122,14 +122,14 @@ pub async fn chat_complete(
             .build()?;
 
         let response = client.chat().create(request).await?;
-
+        // tracing::info!("🌺结果: {:#?}", response);
         let content = response
             .choices
             .into_iter()
             .next()
             .and_then(|choice| choice.message.content)
             .ok_or_else(|| anyhow::anyhow!("No content found in response"))?;
-
+        
         return Ok(content);
     }
 
