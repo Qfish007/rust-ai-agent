@@ -1,16 +1,15 @@
 use async_openai::types::chat::{
-    ChatCompletionRequestSystemMessageArgs,
-    ChatCompletionRequestUserMessageArgs,
+    ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
     CreateChatCompletionRequestArgs,
 };
 use async_stream::stream;
-use backon::{ ExponentialBuilder, Retryable };
-use futures::{ Stream, StreamExt };
+use backon::{ExponentialBuilder, Retryable};
+use futures::{Stream, StreamExt};
 
 pub fn chat_stream(
     model: &str,
     system: Option<&str>,
-    prompt: Option<&str>
+    prompt: Option<&str>,
 ) -> impl Stream<Item = anyhow::Result<String>> {
     stream! {
         // 1. 创建 AI 客户端
@@ -65,7 +64,7 @@ pub fn chat_stream(
 pub async fn chat_stream_with_rety(
     model: &str,
     system: Option<&str>,
-    prompt: Option<&str>
+    prompt: Option<&str>,
 ) -> anyhow::Result<String> {
     let op = || async {
         let s = chat_stream(model, system, prompt);
@@ -89,5 +88,6 @@ pub async fn chat_stream_with_rety(
         Ok(output)
     };
 
-    op.retry(ExponentialBuilder::default().with_max_times(3)).await
+    op.retry(ExponentialBuilder::default().with_max_times(3))
+        .await
 }

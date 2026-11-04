@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use ai_agent::{
-    gaia::*,
-    llm::*,
-};
+use ai_agent::{gaia::*, llm::*};
 use tokio::task::JoinSet;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
@@ -13,11 +10,10 @@ const MODELS: &[&str] = &["deepseek-v4-flash", "deepseek-v4-pro"];
 pub async fn gaia_level1_experiment() -> anyhow::Result<()> {
     // step1: 加载数据集
     let problems = load_gaia_level1().await?;
-    
+
     // step2: JoinSet 用于并行评估多个模型
     let mut set = JoinSet::new();
 
-    
     for model in MODELS.iter() {
         for problem in problems.iter() {
             let problem = problem.clone();

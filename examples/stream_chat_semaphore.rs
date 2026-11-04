@@ -1,9 +1,7 @@
-
+use ai_agent::{constant::DEEPSEEK_FLASH_MODEL, llm::*};
 use tokio::task::JoinSet;
 use tracing::{Instrument, Level};
 use tracing_subscriber::FmtSubscriber;
-use ai_agent::{llm::*, constant::DEEPSEEK_FLASH_MODEL};
-
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -23,7 +21,6 @@ async fn main() -> anyhow::Result<()> {
         "道德经的第九章是什么",
         "道德经的第十章是什么",
     ];
- 
 
     // 1.set 创建 JoinSet  用于管理多个异步任务的执行
     let mut set = JoinSet::new();
@@ -31,21 +28,25 @@ async fn main() -> anyhow::Result<()> {
     for prompt in prompts {
         let span = tracing::info_span!("chat", prompt = prompt);
         // 2. 启动异步任务，将结果加入到 JoinSet 中
-        set.spawn(async move{
-            tracing::info!("\n\nprompt: {}", prompt);
-            // 2.1 从信号量中获取许可
-            let permit = get_semaphore().acquire().await?;
-            let output = chat_stream_with_rety(
-                DEEPSEEK_FLASH_MODEL, 
-                Some("你是一个全能的助手"), 
-                Some(prompt)).await?;
-            // 2.2 释放许可
-            drop(permit);
+        set.spawn(
+            async move {
+                tracing::info!("\n\nprompt: {}", prompt);
+                // 2.1 从信号量中获取许可
+                let permit = get_semaphore().acquire().await?;
+                let output = chat_stream_with_rety(
+                    DEEPSEEK_FLASH_MODEL,
+                    Some("你是一个全能的助手"),
+                    Some(prompt),
+                )
+                .await?;
+                // 2.2 释放许可
+                drop(permit);
 
-            // 2.3 异步返回的结果，包含 prompt 和 output 两个字段
-            Ok::<_, anyhow::Error>((prompt, output))
-        }
-        .instrument(span)); // instrument 用于添加 tracing 日志
+                // 2.3 异步返回的结果，包含 prompt 和 output 两个字段
+                Ok::<_, anyhow::Error>((prompt, output))
+            }
+            .instrument(span),
+        ); // instrument 用于添加 tracing 日志
     }
 
     // 这里result 由2个Result 包裹，第一个是await 等待任务完成，第二个是任务返回的结果
@@ -53,17 +54,15 @@ async fn main() -> anyhow::Result<()> {
         match result {
             Ok(Ok((prompt, output))) => {
                 tracing::info!("prompt: {}, output: {}", prompt, output);
-            },
+            }
             Ok(Err(e)) => {
                 tracing::error!("Error: {:?}", e);
-            },
+            }
             Err(e) => {
                 tracing::error!("Error: {:?}", e);
-            },
+            }
         }
     }
 
     Ok(())
 }
-
-
