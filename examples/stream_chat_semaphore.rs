@@ -35,7 +35,10 @@ async fn main() -> anyhow::Result<()> {
             tracing::info!("\n\nprompt: {}", prompt);
             // 2.1 从信号量中获取许可
             let permit = get_semaphore().acquire().await?;
-            let output = chat_stream_with_rety(DEEPSEEK_FLASH_MODEL, Some("你是一个全能的助手"), Some(prompt)).await?;
+            let output = chat_stream_with_rety(
+                DEEPSEEK_FLASH_MODEL, 
+                Some("你是一个全能的助手"), 
+                Some(prompt)).await?;
             // 2.2 释放许可
             drop(permit);
 
