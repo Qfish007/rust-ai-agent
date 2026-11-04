@@ -1,15 +1,16 @@
 use async_openai::types::chat::{
-    ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+    ChatCompletionRequestSystemMessageArgs,
+    ChatCompletionRequestUserMessageArgs,
     CreateChatCompletionRequestArgs,
 };
 use async_stream::stream;
-use backon::{ExponentialBuilder, Retryable};
-use futures::{Stream, StreamExt};
+use backon::{ ExponentialBuilder, Retryable };
+use futures::{ Stream, StreamExt };
 
 pub fn chat_stream(
     model: &str,
     system: Option<&str>,
-    prompt: Option<&str>,
+    prompt: Option<&str>
 ) -> impl Stream<Item = anyhow::Result<String>> {
     stream! {
         // 1. 创建 AI 客户端
@@ -46,7 +47,10 @@ pub fn chat_stream(
             match response_result {
                 Ok(chunk) => {
                     // println!("【🍺{:?}🍺】", chunk);
-                    if let Some(choice) = chunk.choices.first() && let Some(new_text) = &choice.delta.content{
+                    if
+                        let Some(choice) = chunk.choices.first() &&
+                        let Some(new_text) = &choice.delta.content
+                    {
                         yield Ok(new_text.clone());
                     }
                 }
@@ -61,7 +65,7 @@ pub fn chat_stream(
 pub async fn chat_stream_with_rety(
     model: &str,
     system: Option<&str>,
-    prompt: Option<&str>,
+    prompt: Option<&str>
 ) -> anyhow::Result<String> {
     let op = || async {
         let s = chat_stream(model, system, prompt);
@@ -73,7 +77,7 @@ pub async fn chat_stream_with_rety(
             match result {
                 Ok(txt) => {
                     output.push_str(&txt);
-                    print!("{}", txt); 
+                    print!("{}", txt);
                 }
                 Err(e) => {
                     tracing::error!("Error: {:?}", e);
