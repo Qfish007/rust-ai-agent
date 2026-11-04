@@ -4,7 +4,7 @@ use async_openai::types::chat::{
     ChatCompletionRequestUserMessageArgs, ChatCompletionTools, CreateChatCompletionRequestArgs,
 };
 
-use crate::tools::{CalculatorArgs, calculator};
+use crate::tools::{CalculatorArgs, WebSearchArgs, calculator, search_web};
 
 pub async fn chat_complete(
     model: &str,
@@ -87,6 +87,24 @@ pub async fn chat_complete(
                                 .build()?
                                 .into(),
                         );
+                    }else if fun_name == WebSearchArgs::name() {
+                        let args: WebSearchArgs = serde_json::from_str(&fun_args)?;
+                        let result = search_web(args).await;
+                        // tracing::info!("搜索结果: {:#?}", result);
+                        let tool_result = match result{
+                            Ok(result) => serde_json::to_string(&result)?,
+                            Err(error) => error.to_string(),
+                        };
+
+                        tracing::info!("搜索结果: {}", tool_result);
+                        // 将工具调用结果添加到消息队列中
+                        messages.push(
+                            ChatCompletionRequestToolMessageArgs::default()
+                                .tool_call_id(function_call.id.clone())
+                                .content(tool_result)
+                                .build()?
+                                .into(),
+                        );
                     }
                 }
                 _ => {
@@ -102,7 +120,7 @@ pub async fn chat_complete(
             .tools(tools.clone())
             .max_tokens(2048u32)
             .build()?;
-        
+
         let response = client.chat().create(request).await?;
 
         let content = response
