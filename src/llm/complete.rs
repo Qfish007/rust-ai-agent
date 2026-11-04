@@ -1,7 +1,11 @@
 use async_openai::types::chat::{
-    ChatCompletionMessageToolCalls, ChatCompletionRequestAssistantMessageArgs,
-    ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestToolMessageArgs,
-    ChatCompletionRequestUserMessageArgs, ChatCompletionTools, CreateChatCompletionRequestArgs,
+    ChatCompletionMessageToolCalls,
+    ChatCompletionRequestAssistantMessageArgs,
+    ChatCompletionRequestSystemMessageArgs,
+    ChatCompletionRequestToolMessageArgs,
+    ChatCompletionRequestUserMessageArgs,
+    ChatCompletionTools,
+    CreateChatCompletionRequestArgs,
 };
 
 use crate::tools::*;
@@ -10,7 +14,7 @@ pub async fn chat_complete(
     model: &str,
     system: Option<&str>,
     prompt: Option<&str>,
-    tool_box: &ToolBox,
+    tool_box: &ToolBox
 ) -> anyhow::Result<String> {
     // 创建 AI 客户端
     let client = async_openai::Client::new();
@@ -19,31 +23,27 @@ pub async fn chat_complete(
 
     if let Some(system) = system {
         messages.push(
-            ChatCompletionRequestSystemMessageArgs::default()
-                .content(system)
-                .build()?
-                .into(),
+            ChatCompletionRequestSystemMessageArgs::default().content(system).build()?.into()
         );
     }
 
     // 将用户提示添加到消息队列中
     if let Some(prompt) = prompt {
         messages.push(
-            ChatCompletionRequestUserMessageArgs::default()
-                .content(prompt)
-                .build()?
-                .into(),
+            ChatCompletionRequestUserMessageArgs::default().content(prompt).build()?.into()
         );
     }
 
     loop {
         let tool_definitions: Vec<ChatCompletionTools> = tool_box
             .values()
-            .filter_map(|t| match t.definition() {
-                Ok(def) => Some(def),
-                Err(e) => {
-                    tracing::error!("Error in tool definition: {:?}", e);
-                    None
+            .filter_map(|t| {
+                match t.definition() {
+                    Ok(def) => Some(def),
+                    Err(e) => {
+                        tracing::error!("Error in tool definition: {:?}", e);
+                        None
+                    }
                 }
             })
             .collect();
@@ -60,12 +60,10 @@ pub async fn chat_complete(
         let response = client.chat().create(request).await?;
         tracing::info!("🌹llm response: {:#?}🌹", response);
 
-        let message = response
-            .choices
+        let message = response.choices
             .into_iter()
             .next()
-            .ok_or_else(|| anyhow::anyhow!("No message found in response"))?
-            .message;
+            .ok_or_else(|| anyhow::anyhow!("No message found in response"))?.message;
 
         // 4 处理工具调用结果
         if let Some(tool_calls) = message.tool_calls {
@@ -73,8 +71,8 @@ pub async fn chat_complete(
             messages.push(
                 ChatCompletionRequestAssistantMessageArgs::default()
                     .tool_calls(tool_calls.clone())
-                    .build()?
-                    .into(),
+                    .build()? 
+                    .into()
             );
 
             // 4.2 遍历工具调用结果，执行工具调用
@@ -85,7 +83,7 @@ pub async fn chat_complete(
                     tracing::info!("fun_name: {}, fun_args: {}", fun_name, fun_args);
 
                     let tool_result = match tool_box.get(fun_name) {
-                        Some(tool) => {
+                        Some(tool) => { 
                             match tool.execute(fun_args).await {
                                 Ok(result) => {
                                     tracing::info!("tool 结果: {:#?}", result);
@@ -110,14 +108,14 @@ pub async fn chat_complete(
                             .tool_call_id(function_call.id)
                             .content(tool_result)
                             .build()?
-                            .into(),
+                            .into()
                     );
                 }
             }
-        } else {
+        }else{
             let content = message
-                .content
-                .ok_or_else(|| anyhow::anyhow!("No content found in response"))?;
+            .content
+            .ok_or_else(|| anyhow::anyhow!("No content found in response"))?;
 
             return Ok(content);
         }
