@@ -30,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
     let result = chat_complete(
         DEEPSEEK_FLASH_MODEL,
         Some(system_prompt),
-        Some("厦门市最新关于翔安机场的新闻,只要一条数据"),
+        Some("厦门市今日天气"),
         &toolbox,
     )
     .await?;
