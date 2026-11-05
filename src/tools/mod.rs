@@ -22,8 +22,9 @@ pub async fn build_toolbox() -> anyhow::Result<ToolBox> {
     // 创建 MCP 客户端，链接 MCP Server
     let mcp_client = Arc::new(McpClient::connect().await?);
 
-    // 拿到 MCP Server 暴露的所有工具
+    
     for tool in mcp_client.list_tools().await? {
+        // 拿到 MCP Server 暴露的所有工具, 并包装成 McpTool
         tools.push(Box::new(McpTool::new(mcp_client.clone(), tool)));
     }
 

@@ -19,6 +19,7 @@ impl McpTool {
     /// name(&self) -> &str 返回的引用要跟 self 的生命周期绑在一起，
     /// 不能直接借用 rmcp::model::Tool 里 'static 的 Cow<str>。
     pub fn new(client: Arc<McpClient>, tool: rmcp::model::Tool) -> Self {
+        
         let parameters = Value::Object((*tool.input_schema).clone());
 
         Self {

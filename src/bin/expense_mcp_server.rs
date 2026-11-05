@@ -110,16 +110,10 @@ impl ExpenseServer {
                 if status.is_success() {
                     Ok(CallToolResult::success(vec![ContentBlock::text(body)]))
                 } else {
-                    Err(
-                        McpError::internal_error(
-                            format!("expense-tracker-api 返回了 {status}: {body}"),
-                            None
-                        )
-                    )
+                    Err(McpError::internal_error( format!("expense-tracker-api 返回了 {status}: {body}"),None))
                 }
             }
-            Err(e) =>
-                Err(McpError::internal_error(format!("请求 expense-tracker-api 失败: {e}"), None)),
+            Err(e) => Err(McpError::internal_error(format!("请求 expense-tracker-api 失败: {e}"), None)),
         }
     }
 }
