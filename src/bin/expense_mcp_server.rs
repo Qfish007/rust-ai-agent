@@ -137,12 +137,14 @@ impl ExpenseServer {
             query.push(("month".to_string(), month.clone()));
         }
 
+        // 发送请求
         let result = self.http
             .get(format!("{}/expenses", self.base_url))
             .header("x-api-key", &self.api_key)
             .query(&query)
             .send().await;
 
+        // 处理响应
         Self::respond(result).await
     }
 
