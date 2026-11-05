@@ -1,0 +1,130 @@
+### ============================================================
+### expense-tracker-api 手动测试文件
+### ============================================================
+#
+# 这是什么：
+# 一个用 Rust + axum 写的费用记账 API，数据全部存在内存里
+# （启动时会自动填充几条示例数据），进程一重启数据就没了，
+# 没有连接任何数据库。可以把它想象成公司内部的一个小型
+# 业务系统：MCP Server 以后不会直接读数据库，而是像这个文件
+# 一样，通过 HTTP 请求来操作数据。
+#
+# 怎么用这个文件：
+# 1. VS Code 装好 "REST Client" 插件（作者 Huachao Mao）
+# 2. 先在终端运行 API：cargo run
+# 3. 每个请求上方都有一行 "Send Request"，点一下就会发送，
+#    右边会弹出响应窗口，能看到状态码和返回的 JSON
+# 4. 请求可以按顺序执行，也可以跳着点，互不影响
+#
+# 鉴权说明：
+# 除了 /health，其它接口都需要带上请求头 x-api-key，
+# 值写死在服务端代码里，就是下面 @apiKey 这个变量的值。
+# 这是教学用的最简单鉴权方式，真实项目里这个 key 应该来自
+# 环境变量或密钥管理服务，而不是硬编码。
+#
+# ------------------------------------------------------------
+# 下面这两行是"变量"，后面的请求里用 {{baseUrl}} {{apiKey}}
+# 引用，改端口或者改 key 只需要改这一处
+@baseUrl = http://localhost:3000
+@apiKey = dev-secret-key
+
+
+### 1. 健康检查（不需要鉴权）
+# 只是确认服务有没有启动成功，返回纯文本 "ok"
+GET {{baseUrl}}/health
+
+
+### 2. 查看所有费用记录
+# 不带任何参数，返回内存里现在所有的记录
+GET {{baseUrl}}/expenses
+x-api-key: {{apiKey}}
+
+
+### 3. 按分类筛选（比如只看"Food"这个分类）
+# category 大小写不敏感，Food / food 都能匹配到
+GET {{baseUrl}}/expenses?category=Food
+x-api-key: {{apiKey}}
+
+
+### 4. 按月份筛选（格式必须是 YYYY-MM）
+GET {{baseUrl}}/expenses?month=2026-07
+x-api-key: {{apiKey}}
+
+
+### 5. 分类 + 月份一起筛选，两个条件是"并且"的关系
+GET {{baseUrl}}/expenses?category=Travel&month=2026-06
+x-api-key: {{apiKey}}
+
+
+### 6. 新增一条费用记录
+# 成功会返回 201 Created，响应体里能看到服务端生成的 id，
+# 把这个 id 复制下来，后面第 7/8/9 个请求要用到
+POST {{baseUrl}}/expenses
+x-api-key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "description": "Coffee with a client",
+  "amount": 9.5,
+  "category": "Food",
+  "date": "2026-07-20"
+}
+
+
+### 7. 根据 id 查询单条记录
+# 把下面 <把上一步返回的id粘贴到这里> 替换成第 6 步拿到的 id
+GET {{baseUrl}}/expenses/8ce3fed7-95af-4713-a952-5d50c4d20b36
+x-api-key: {{apiKey}}
+
+
+### 8. 局部更新一条记录
+# 这是"部分更新"：body 里只写你想改的字段就行，
+# 没写的字段（比如 description、category、date）保持不变
+PUT {{baseUrl}}/expenses/8ce3fed7-95af-4713-a952-5d50c4d20b36
+x-api-key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "amount": 11.0
+}
+
+
+### 9. 删除一条记录
+# 成功返回 204 No Content（没有响应体是正常的）
+DELETE {{baseUrl}}/expenses/8ce3fed7-95af-4713-a952-5d50c4d20b36
+x-api-key: {{apiKey}}
+
+
+### 10. 查看汇总统计（不带月份 = 统计全部数据）
+# 返回总金额，以及按分类拆分的小计和笔数
+GET {{baseUrl}}/expenses/summary
+x-api-key: {{apiKey}}
+
+
+### 11. 查看某个月的汇总统计
+GET {{baseUrl}}/expenses/summary?month=2026-07
+x-api-key: {{apiKey}}
+
+
+### ---------------- 下面是"故意测试失败情况"的请求 ----------------
+
+### 12. 不带 API key —— 应该返回 401 Unauthorized
+GET {{baseUrl}}/expenses
+
+
+### 13. 金额为负数 —— 应该返回 400 Bad Request
+POST {{baseUrl}}/expenses
+x-api-key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "description": "无效金额测试",
+  "amount": -5,
+  "category": "Food",
+  "date": "2026-07-20"
+}
+
+
+### 14. 查询一个不存在的 id —— 应该返回 404 Not Found
+GET {{baseUrl}}/expenses/00000000-0000-0000-0000-000000000000
+x-api-key: {{apiKey}}

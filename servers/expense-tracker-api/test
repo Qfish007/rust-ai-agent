@@ -1,0 +1,14 @@
+cat > /etc/init.d/delayreboot << 'EOF'
+#!/bin/sh /etc/rc.common
+
+START=99
+USE_PROCD=1
+
+start_service() {
+    procd_open_instance
+    procd_set_param command /bin/sh -c "sleep 120 && reboot"
+    procd_close_instance
+}
+EOF
+
+chmod +x /etc/init.d/delayreboot
