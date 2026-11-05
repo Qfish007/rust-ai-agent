@@ -20,8 +20,6 @@ pub trait Tool: Send + Sync {
             .build()
             .map_err(|e| anyhow::anyhow!("Failed to build function: {}, {}", self.name(), e))?;
 
-        Ok(ChatCompletionTools::Function(ChatCompletionTool {
-            function,
-        }))
+        Ok(ChatCompletionTools::Function(ChatCompletionTool { function }))
     }
 }

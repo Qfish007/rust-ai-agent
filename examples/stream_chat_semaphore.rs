@@ -28,8 +28,7 @@ async fn main() -> anyhow::Result<()> {
     for prompt in prompts {
         let span = tracing::info_span!("chat", prompt = prompt);
         // 2. 启动异步任务，将结果加入到 JoinSet 中
-        set.spawn(
-            async move {
+        set.spawn(async move {
                 tracing::info!("\n\nprompt: {}", prompt);
                 // 2.1 从信号量中获取许可
                 let permit = get_semaphore().acquire().await?;
