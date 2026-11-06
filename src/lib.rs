@@ -3,3 +3,4 @@ pub mod gaia;
 pub mod llm;
 pub mod models;
 pub mod tools;
+pub mod agent;

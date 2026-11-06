@@ -4,7 +4,7 @@ use async_openai::types::chat::{
     ChatCompletionRequestUserMessageArgs, ChatCompletionTools, CreateChatCompletionRequestArgs,
 };
 
-use crate::tools::*;
+use crate::{agent::ExecutionContext, tools::*};
 
 pub async fn chat_complete(
     model: &str,
@@ -16,6 +16,8 @@ pub async fn chat_complete(
     let client = async_openai::Client::new();
 
     let mut messages = vec![];
+    let context = ExecutionContext::new();
+
 
     if let Some(system) = system {
         messages.push(
@@ -86,7 +88,7 @@ pub async fn chat_complete(
 
                     let tool_result = match tool_box.get(fun_name) {
                         Some(tool) => {
-                            match tool.execute(fun_args).await {
+                            match tool.execute(fun_args, &context).await {
                                 Ok(result) => {
                                     tracing::info!("tool 结果: {:#?}", result);
                                     result

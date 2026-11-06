@@ -2,6 +2,8 @@ use anyhow::Context;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::agent::ExecutionContext;
+
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct WebSearchArgs {
     pub query: String,
