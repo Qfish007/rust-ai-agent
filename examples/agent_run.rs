@@ -42,8 +42,7 @@ async fn main() -> anyhow::Result<()> {
     let agent = Agent::new(DEEPSEEK_FLASH_MODEL, Some(&instructions), &toolbox).with_max_steps(8);
 
     println!("\n=== Agent::run 测试 ===");
-    let result = agent
-        .run(
+    let result = agent.run(
             r"我想买一台 Mac Mini M4。
 
 请帮我做一个购买分析：
