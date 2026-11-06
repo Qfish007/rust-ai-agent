@@ -85,11 +85,9 @@ impl ExpenseServer {
             http: reqwest::Client::new(),
             // 优先读环境变量，读不到就用本地默认值，
             // 这样以后部署到别的地方也不用改代码
-            base_url: std::env
-                ::var("EXPENSE_API_URL")
+            base_url: std::env::var("EXPENSE_API_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
-            api_key: std::env
-                ::var("EXPENSE_API_KEY")
+            api_key: std::env::var("EXPENSE_API_KEY")
                 .unwrap_or_else(|_| "dev-secret-key".to_string()),
         }
     }
