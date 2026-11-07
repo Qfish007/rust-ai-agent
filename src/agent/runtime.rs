@@ -60,17 +60,14 @@ impl<'a> Agent<'a> {
 
         let client = async_openai::Client::new();
 
-        let tool_definitions: Vec<ChatCompletionTools> = self
-            .toolbox
-            .values()
+        let tool_definitions: Vec<ChatCompletionTools> = self.toolbox.values()
             .filter_map(|t| match t.definition() {
                 Ok(def) => Some(def),
                 Err(e) => {
                     tracing::warn!("Skip tool {}, failed to get its definition: {e}", t.name());
                     None
                 }
-            })
-            .collect();
+            }).collect();
 
         loop {
             if context.current_step >= self.max_steps {
@@ -212,6 +209,7 @@ impl<'a> Agent<'a> {
     ) -> anyhow::Result<Vec<ChatCompletionRequestMessage>> {
         let mut messages = Vec::new();
 
+        // 系统提示词
         if let Some(system) = self.instructions {
             messages.push(
                 ChatCompletionRequestSystemMessageArgs::default()
@@ -256,9 +254,7 @@ impl<'a> Agent<'a> {
                         // 同一轮里模型可能一次请求多个工具调用，
                         // 这些 ToolCall 要合并进同一条 assistant 消息里，
                         // 否则 API 会认为这是好几条不同的助手消息。
-                        if let Some(ChatCompletionRequestMessage::Assistant(last)) =
-                            messages.last_mut()
-                        {
+                        if let Some(ChatCompletionRequestMessage::Assistant(last)) = messages.last_mut() {
                             last.tool_calls.get_or_insert_with(Vec::new).push(tool_call);
                         } else {
                             messages.push(

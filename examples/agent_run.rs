@@ -43,15 +43,13 @@ async fn main() -> anyhow::Result<()> {
 
     println!("\n=== Agent::run 测试 ===");
     let result = agent.run(
-            r"我想买一台 Mac Mini M4。
-
+            r"我想买一台 Mac Mini M4。s
 请帮我做一个购买分析：
 1. 使用搜索工具查询目前 Mac Mini M4 的价格。
 2. 查询我过去三个月的 Software 分类支出。
 3. 计算 Mac Mini M4 价格占过去三个月 Software 支出的多少倍，
-   以及每个月节省 500 元需要多少个月才能攒够。
+以及每个月节省 500 元需要多少个月才能攒够。
 4. 根据我的消费情况，给我一个是否应该购买的建议。
-
 所有价格和消费数据必须来自工具，不要自己猜测数据。",
         )
         .await?;
