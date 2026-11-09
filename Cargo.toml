@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
-async-openai = { version = "0.43.0", features = ["chat-completion"] }
+async-openai = { version = "0.43.0", features = ["chat-completion", "embedding"] }
 async-stream = "0.3.6"
 async-trait = "0.1.92"
 backon = "1.6.0"# backon 处理重试
@@ -27,3 +27,4 @@ rmcp = { version = "3.8.0", features = [
 ] }
 chrono = { version = "0.4.45", features = ["serde"] }
 uuid = { version = "1.24.0", features = ["v4"] }
+tiktoken-rs = "0.12.0"
