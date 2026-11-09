@@ -150,15 +150,13 @@ impl Agent {
         }
     }
 
-    pub async fn run_structured<T>(
-        &self,
-        user_input: &str,
-    ) -> anyhow::Result<StructuredAgentResult<T>>
-    where
-        T: schemars::JsonSchema + serde::de::DeserializeOwned,
+    pub async fn run_structured<T>(&self, user_input: &str) -> anyhow::Result<StructuredAgentResult<T>>
+    where T: schemars::JsonSchema + serde::de::DeserializeOwned,
     {
+        // 1. 构建上下文
         let mut context = ExecutionContext::new();
 
+        // 2. 添加用户输入事件 
         context.add_event(Event::new(
             context.execution_id.clone(),
             "user",
@@ -168,8 +166,10 @@ impl Agent {
             }],
         ));
 
+        // 3. 创建OpenAI客户端实例
         let client = async_openai::Client::new();
 
+        // 4. 注册工具定义
         let mut tool_definitions: Vec<ChatCompletionTools> = self
             .toolbox
             .values()
@@ -181,9 +181,12 @@ impl Agent {
                 }
             })
             .collect();
+        
+        // 5. 添加最终答案工具定义
         tool_definitions.push(final_answer_tool_definition::<T>()?);
 
         loop {
+            // 6. 检查是否超过最大步数
             if context.current_step >= self.max_steps {
                 anyhow::bail!(
                     "Agent exceeded the maximum of {} steps without a final answer",
@@ -191,10 +194,10 @@ impl Agent {
                 );
             }
 
-            // 构建消息列表
+            // 7. 构建消息列表
             let messages = self.build_messages(&context)?;
 
-            // 构建请求
+            // 8. 构建请求 ChatCompletionToolChoiceOption::Mode(ToolChoiceOptions::Required) 说明模型必须调用工具，不能直接回复
             let request = CreateChatCompletionRequestArgs::default()
                 .model(self.model.clone())
                 .messages(messages)
@@ -203,12 +206,12 @@ impl Agent {
                 .max_tokens(2048u32)
                 .build()?;
 
-            // 发送请求,获取响应 ,最大重试3次
+            // 9. 发送请求,获取响应 ,最大重试3次
             let response = (|| async { client.chat().create(request.clone()).await })
                 .retry(ExponentialBuilder::default().with_max_times(3))
                 .await?;
 
-            // 记录模型调用统计信息
+            // 10. 记录模型调用统计信息
             if let Some(usage) = &response.usage {
                 context.usage.add(
                     usage.prompt_tokens,
@@ -217,7 +220,7 @@ impl Agent {
                 );
             }
 
-            // 解析响应
+            // 11. 解析响应
             let message = response
                 .choices
                 .into_iter()
@@ -225,13 +228,15 @@ impl Agent {
                 .ok_or_else(|| anyhow::anyhow!("No choices in response"))?
                 .message;
 
-            // 解析工具调用结果
+            // 12. 肯定会有工具调用结果，因为tool_choice = required
             let tool_calls = message.tool_calls.ok_or_else(|| {
                 anyhow::anyhow!("Model returned no tool call despite tool_choice = required")
             })?;
 
+            // 13. 记录工具调用结果
             self.record_tool_calls(&mut context, &tool_calls);
 
+            // 14. 如果有最终答案工具调用，
             let final_call = tool_calls.iter().find_map(|tool_call| match tool_call {
                 ChatCompletionMessageToolCalls::Function(f)
                     if f.function.name == "final_answer" =>
@@ -241,6 +246,7 @@ impl Agent {
                 _ => None,
             });
 
+            // 15. 解析最终答案工具调用参数
             if let Some(final_call) = final_call {
                 let raw_arguments = final_call.function.arguments.clone();
                 let parsed: T = serde_json::from_str(&raw_arguments)?;
@@ -263,7 +269,10 @@ impl Agent {
                 });
             }
 
+            // 16. 执行工具调用
             self.execute_tool_calls(&mut context, &tool_calls).await;
+            
+            // 17. 增加当前步数
             context.increment_step();
         }
     }
@@ -349,10 +358,7 @@ impl Agent {
         ));
     }
 
-    fn build_messages(
-        &self,
-        context: &ExecutionContext,
-    ) -> anyhow::Result<Vec<ChatCompletionRequestMessage>> {
+    fn build_messages(&self,context: &ExecutionContext) -> anyhow::Result<Vec<ChatCompletionRequestMessage>> {
         let mut messages = Vec::new();
 
         // 1. 添加系统指令
@@ -435,6 +441,7 @@ impl Agent {
     }
 }
 
+// 构建最终答案工具定义
 fn final_answer_tool_definition<T: schemars::JsonSchema>() -> anyhow::Result<ChatCompletionTools> {
     let schema = schemars::schema_for!(T);
     let schema_json = serde_json::to_value(&schema)?;

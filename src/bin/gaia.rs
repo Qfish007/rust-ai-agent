@@ -21,11 +21,15 @@ async fn main() -> anyhow::Result<()> {
 }
 
 pub async fn gaia_level1_experiment() -> anyhow::Result<()> {
+    // 加载GAIA Level1数据集
     let problems = load_gaia_level1().await?;
+    // 构建工具箱
     let toolbox = Arc::new(build_toolbox().await?);
 
+    // 启动任务集
     let mut set = JoinSet::new();
 
+    // 无工具评估
     for problem in problems.iter() {
         let problem = problem.clone();
         set.spawn(async move {
@@ -36,6 +40,7 @@ pub async fn gaia_level1_experiment() -> anyhow::Result<()> {
         });
     }
 
+    // 带工具评估
     for problem in problems.iter() {
         let problem = problem.clone();
         let toolbox = toolbox.clone();
