@@ -1,23 +1,14 @@
+use std::sync::Arc;
+
+use anyhow::Ok;
 use async_openai::types::chat::{
     ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
-    CreateChatCompletionRequestArgs, FinishReason, ResponseFormat,
+    CreateChatCompletionRequestArgs, FinishReason, ResponseFormat, ResponseFormatJsonSchema,
 };
 use backon::{ExponentialBuilder, Retryable};
 
-use crate::gaia::GaiaOutput;
+use crate::{agent::Agent, gaia::models::GaiaOutput, tools::ToolBox};
 
-pub const GAIA_PROMPT: &'static str = r#"You are a general AI assistant. I will ask you a question.
-First, determine if you can solve this problem with your current capabilities and set "is_solvable" accordingly.
-If you can solve it, set "is_solvable" to true and provide your answer in "final_answer".
-If you cannot solve it, set "is_solvable" to false and explain why in "unsolvable_reason".
-Your final answer should be a number OR as few words as possible OR a comma-separated list of numbers and/or strings.
-If you are asked for a number, don't use a comma to write your number neither use units such as $ or percent sign unless sp
-If you are asked for a string, don't use articles, neither abbreviations (e.g., for cities), and write the digits in plain
-If you are asked for a comma-separated list, apply the above rules depending on whether the element is a number or a string
-"#;
-
-// solve_problem_with_retry, 重试3次
-#[allow(unused)]
 pub async fn solve_problem_with_retry(
     model: &str,
     system: &str,
@@ -30,12 +21,16 @@ pub async fn solve_problem_with_retry(
 
 async fn solve_problem(model: &str, system: &str, prompt: &str) -> anyhow::Result<GaiaOutput> {
     let schema = schemars::schema_for!(GaiaOutput);
-    let schema_json = serde_json::to_string_pretty(schema.as_value())?;
-    let schema_str = format!(
-        "你必须以 JSON 格式回复，输出需严格符合以下 JSON Schema，不要包含任何其他内容：\n{schema_json}"
-    );
+    let schema_json = serde_json::to_value(&schema)?;
+    let format_setting = ResponseFormat::JsonSchema {
+        json_schema: ResponseFormatJsonSchema {
+            description: Some("GAIA problem solving output".into()),
+            name: "gaia_output".into(),
+            schema: schema_json,
+            strict: Some(true),
+        },
+    };
 
-    // 2. 构建请求
     let client = async_openai::Client::new();
     let request = CreateChatCompletionRequestArgs::default()
         .model(model)
@@ -48,23 +43,18 @@ async fn solve_problem(model: &str, system: &str, prompt: &str) -> anyhow::Resul
                 .content(prompt)
                 .build()?
                 .into(),
-            ChatCompletionRequestSystemMessageArgs::default()
-                .content(schema_str)
-                .build()?
-                .into(),
         ])
-        .response_format(ResponseFormat::JsonObject)
+        .response_format(format_setting)
         .build()?;
 
-    // 3. 发送请求
     let response = client.chat().create(request).await?;
+
     let choice = response
         .choices
         .into_iter()
         .next()
-        .ok_or_else(|| anyhow::anyhow!("No choice in response"))?;
+        .ok_or_else(|| anyhow::anyhow!("No choices in response"))?;
 
-    // 4. 解析响应,检查模型是否拒绝回答
     if choice.finish_reason == Some(FinishReason::ContentFilter) {
         return Ok(GaiaOutput {
             is_solvable: false,
@@ -73,12 +63,22 @@ async fn solve_problem(model: &str, system: &str, prompt: &str) -> anyhow::Resul
         });
     }
 
-    // 5. 解析响应,将模型回答转换为GaiaOutput结构体
     let content = choice
         .message
         .content
-        .ok_or_else(|| anyhow::anyhow!("No content in message"))?;
+        .ok_or_else(|| anyhow::anyhow!("No content in response"))?;
     let output: GaiaOutput = serde_json::from_str(&content)?;
 
     Ok(output)
+}
+
+pub async fn solve_problem_with_tools(
+    model: &str,
+    system: &str,
+    prompt: &str,
+    toolbox: Arc<ToolBox>,
+) -> anyhow::Result<GaiaOutput> {
+    let agent = Agent::new(model, Some(system), toolbox).with_max_steps(15);
+    let result = agent.run_structured::<GaiaOutput>(prompt).await?;
+    Ok(result.output)
 }

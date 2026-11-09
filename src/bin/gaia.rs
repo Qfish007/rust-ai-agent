@@ -1,70 +1,77 @@
-use std::collections::HashMap;
+use std::{ collections::HashMap, sync::Arc };
 
-use ai_agent::{gaia::*, llm::*};
+use ai_agent::{
+    constant::DEEPSEEK_FLASH_MODEL,
+    gaia::*,
+    llm::*,
+    tools::build_toolbox,
+};
 use tokio::task::JoinSet;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-
-const MODELS: &[&str] = &["deepseek-v4-flash", "deepseek-v4-pro"];
-
-pub async fn gaia_level1_experiment() -> anyhow::Result<()> {
-    // step1: 加载数据集
-    let problems = load_gaia_level1().await?;
-
-    // step2: JoinSet 用于并行评估多个模型
-    let mut set = JoinSet::new();
-
-    for model in MODELS.iter() {
-        for problem in problems.iter() {
-            let problem = problem.clone();
-            // step3: 并行评估多个模型
-            set.spawn(async move {
-                // step4: 设置信号量
-                let permit = get_semaphore().acquire().await?;
-                // step5: 评估模型
-                let eval = evaluate_gaia_single(problem, model).await;
-                drop(permit);
-                Ok::<_, anyhow::Error>(eval)
-            });
-        }
-    }
-
-    let mut results: HashMap<String, Vec<GaiaEvalResult>> = HashMap::new();
-    while let Some(Ok(result)) = set.join_next().await {
-        match result {
-            Ok(eval) => {
-                tracing::info!("{:#?}", eval);
-                results.entry(eval.model.clone()).or_default().push(eval);
-            }
-            Err(e) => {
-                tracing::error!("Error: {:?}", e);
-            }
-        }
-    }
-
-    for (model, evals) in &results {
-        let correct = evals.iter().filter(|e| e.correct).count();
-        let total = evals.len();
-        tracing::info!(
-            "{}: {} / {} ({:.2}%)",
-            model,
-            correct,
-            total,
-            correct as f64 / total as f64
-        );
-    }
-
-    Ok(())
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
+    let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO).finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
     gaia_level1_experiment().await
+}
+
+pub async fn gaia_level1_experiment() -> anyhow::Result<()> {
+    let problems = load_gaia_level1().await?;
+    let toolbox = Arc::new(build_toolbox().await?);
+
+    let mut set = JoinSet::new();
+
+    for problem in problems.iter() {
+        let problem = problem.clone();
+        set.spawn(async move {
+            let permit = get_semaphore().acquire().await?;
+            let eval = evaluate_gaia_single(problem, DEEPSEEK_FLASH_MODEL).await;
+            drop(permit);
+            Ok::<_, anyhow::Error>(("without_tools", eval))
+        });
+    }
+
+    for problem in problems.iter() {
+        let problem = problem.clone();
+        let toolbox = toolbox.clone();
+        set.spawn(async move {
+            let permit = get_semaphore().acquire().await?;
+            let eval = evaluate_gaia_single_with_tools(problem, DEEPSEEK_FLASH_MODEL, toolbox).await;
+            drop(permit);
+            Ok::<_, anyhow::Error>(("with_tools", eval))
+        });
+    }
+
+    let mut results: HashMap<&str, Vec<GaiaEvalResult>> = HashMap::new();
+    while let Some(Ok(result)) = set.join_next().await {
+        match result {
+            Ok((group, eval)) => {
+                tracing::info!("[{group}] {eval:#?}");
+                results.entry(group).or_default().push(eval);
+            }
+            Err(e) => tracing::error!("task panicked: {e}"),
+        }
+    }
+
+    tracing::info!("=== 带工具 vs 不带工具 ===");
+    for group in ["with_tools", "without_tools"] {
+        if let Some(evals) = results.get(group) {
+            let correct = evals
+                .iter()
+                .filter(|e| e.correct)
+                .count();
+            let total = evals.len();
+            tracing::info!(
+                "{group}: {correct}/{total} ({:.1}%)",
+                ((correct as f64) / (total as f64)) * 100.0
+            );
+        }
+    }
+
+    Ok(())
 }

@@ -2,6 +2,7 @@ use ai_agent::{agent::Agent, constant::{DEEPSEEK_FLASH_MODEL}, tools::build_tool
 use chrono::Local;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
+use std::sync::Arc;
 
 /// 跟 simple_agent_loop.rs 是同一个测试场景，
 /// 区别是这里用新的 Agent::run 代替了裸的 chat_complete，
@@ -16,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    let toolbox = build_toolbox().await?;
+     let toolbox = Arc::new(build_toolbox().await?);
 
     let now = Local::now();
     let current_time = now.format("%Y-%m-%d %H:%M:%S").to_string();
@@ -39,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         current_time
     );
 
-    let agent = Agent::new(DEEPSEEK_FLASH_MODEL, Some(&instructions), &toolbox).with_max_steps(8);
+    let agent = Agent::new(DEEPSEEK_FLASH_MODEL, Some(&instructions), toolbox).with_max_steps(8);
 
     println!("\n=== Agent::run 测试 ===");
     let result = agent.run(

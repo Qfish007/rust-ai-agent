@@ -5,16 +5,29 @@ use uuid::Uuid;
 
 use super::event::Event;
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TokenUsage {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub total_tokens: u32,
+}
+
+impl TokenUsage {
+    pub fn add(&mut self, prompt_tokens: u32, completion_tokens: u32, total_tokens: u32) {
+        self.prompt_tokens += prompt_tokens;
+        self.completion_tokens += completion_tokens;
+        self.total_tokens += total_tokens;
+    }
+}
+
 #[derive(Debug)]
-/// Agent 执行期间所有状态的中央存储
-/// 所有方法（think / act / build_messages ...）都只接收这一个结构体，
-/// 不用再拼一堆零散参数。
 pub struct ExecutionContext {
     pub execution_id: String,
     pub events: Vec<Event>,
     pub current_step: u32,
     pub state: HashMap<String, Value>,
     pub final_result: Option<String>,
+    pub usage: TokenUsage
 }
 
 impl ExecutionContext {
@@ -25,15 +38,14 @@ impl ExecutionContext {
             current_step: 0,
             state: HashMap::new(),
             final_result: None,
+            usage: TokenUsage::default()
         }
     }
 
-    /// 把一条 Event 追加进执行历史。
     pub fn add_event(&mut self, event: Event) {
         self.events.push(event);
     }
 
-    /// 往下推进一步，对应完成一轮 think-act 循环。
     pub fn increment_step(&mut self) {
         self.current_step += 1;
     }

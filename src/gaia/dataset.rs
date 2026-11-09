@@ -10,7 +10,7 @@ pub async fn load_gaia_level1() -> anyhow::Result<Vec<GaiaRow>> {
             ("config", "2023_level1"),
             ("split", "validation"),
             ("offset", "0"),
-            ("length", "4"),
+            ("length", "20"),
         ])
         .bearer_auth(std::env::var("HF_TOKEN")?)
         .send()
