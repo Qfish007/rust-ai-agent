@@ -16,8 +16,7 @@ async fn main() -> anyhow::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    // 第 1 步：准备一次「宽泛」的网页搜索——世界杯最佳射手这个话题
-    // 本身会牵出很多相关但不完全对题的内容（赛程、球队、进球集锦等等）
+    // 第 1 步：准备一次「宽泛」的网页搜索——世界杯最佳射手这个话题 本身会牵出很多相关但不完全对题的内容（赛程、球队、进球集锦等等）
     let web_search_args = WebSearchArgs {
         query: "2026美加墨世界杯最佳射手".to_string(),
         max_results: 10,

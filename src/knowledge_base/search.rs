@@ -4,6 +4,7 @@ use anyhow::Ok;
 use crate::constant::*;
 use crate::knowledge_base::*;
 
+
 #[derive(Debug, Clone)]
 pub struct SearchHit {
     pub text: String,
@@ -54,13 +55,20 @@ pub async fn vector_search(
         return Ok(Vec::new());
     }
 
+    // 查询向量
     let query_embedding = embed_text(query, TEXT_EMBEDDING_3_SMALL_MODEL).await?;
+    // 计算分块向量
     let chunk_embeddings = embed_texts(chunks, TEXT_EMBEDDING_3_SMALL_MODEL).await?;
 
+    // 优先队列，维护 top_k 个最大相似度的索引
     let mut heap: BinaryHeap<ScoredIndex> = BinaryHeap::with_capacity(top_k + 1);
+
+    // 计算每个分块的相似度并加入堆
     for (index, embedding) in chunk_embeddings.iter().enumerate() {
         let similarity = cosine_similarity(&query_embedding, embedding);
         heap.push(ScoredIndex { similarity, index });
+
+        // 保持堆大小不超过 top_k
         if heap.len() > top_k {
             heap.pop();
         }
@@ -70,7 +78,7 @@ pub async fn vector_search(
     ranked.sort_by(|a, b| b.similarity.total_cmp(&a.similarity));
 
     Ok(ranked
-        .into_iter()
+        .into_iter() 
         .map(|scored| SearchHit {
             text: chunks[scored.index].clone(),
             similarity: scored.similarity,
