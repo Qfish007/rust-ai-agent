@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let result = agent.run(
         r#"读一下这个压缩包里的候选人信息和职位要求，判断出最合适的候选人。
 确认完之后，把 job_description.txt 删掉，因为信息已经用完了，不需要再占地方。
-压缩包路径：/Users/dave/Desktop/example/candidates.zip"#
+压缩包路径：/Users/lc/Desktop/Demo/GitHub/Rust/ai-agent/static/rag/candidates.zip"#
     ).await?;
 
     println!("回答: {}", result.output);
