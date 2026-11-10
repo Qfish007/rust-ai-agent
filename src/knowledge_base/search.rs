@@ -1,8 +1,8 @@
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 use anyhow::Ok;
-
-use crate::knowledge_base::embed::embed_texts;
+use crate::constant::*;
+use crate::knowledge_base::*;
 
 #[derive(Debug, Clone)]
 pub struct SearchHit {
@@ -54,14 +54,8 @@ pub async fn vector_search(
         return Ok(Vec::new());
     }
 
-    // query 和所有 chunk 一起做 embedding，共享同一份 IDF，保证相似度可比
-    let mut texts = Vec::with_capacity(chunks.len() + 1);
-    texts.push(query.to_string());
-    texts.extend_from_slice(chunks);
-
-    let mut embeddings = embed_texts(&texts);
-    let query_embedding = embeddings.remove(0);
-    let chunk_embeddings = embeddings;
+    let query_embedding = embed_text(query, TEXT_EMBEDDING_3_SMALL_MODEL).await?;
+    let chunk_embeddings = embed_texts(chunks, TEXT_EMBEDDING_3_SMALL_MODEL).await?;
 
     let mut heap: BinaryHeap<ScoredIndex> = BinaryHeap::with_capacity(top_k + 1);
     for (index, embedding) in chunk_embeddings.iter().enumerate() {
