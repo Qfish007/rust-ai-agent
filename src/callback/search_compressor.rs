@@ -30,8 +30,10 @@ impl AfterToolCallback for SearchCompressorCallback {
             return None;
         }
 
+        // 从上下文提取要查询的内容
         let query = extract_query(context, tool_call_id)?;
 
+        // 对查询后的内容进行分块
         let chunks = fixed_length_chunking(content, CHUNK_SIZE, CHUNK_OVERLAP);
 
         if chunks.is_empty() {
@@ -44,6 +46,7 @@ impl AfterToolCallback for SearchCompressorCallback {
             chunks.len(),
         );
 
+        // 调用向量搜索，压缩查询结果
         match vector_search(&query, &chunks, TOP_K).await {
             Ok(hits) => {
                 let compressed = hits
@@ -68,6 +71,7 @@ impl AfterToolCallback for SearchCompressorCallback {
     }
 }
 
+// 从上下文提取查询
 fn extract_query(context: &ExecutionContext, tool_call_id: &str) -> Option<String> {
     context
         .events
