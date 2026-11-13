@@ -97,6 +97,8 @@ pub fn count_tokens(_model: &str, request: &LlmRequest) -> usize {
 
 fn find_safe_start(contents: &[ContentItem], mut start: usize) -> usize {
     loop {
+
+        // 1. 取出切割点内所有的工具调用ID
         let call_ids: HashSet<&str> = contents[start..]
             .iter()
             .filter_map(|item| {
@@ -107,6 +109,7 @@ fn find_safe_start(contents: &[ContentItem], mut start: usize) -> usize {
             })
             .collect();
 
+        // 2. 从工具结果中找到第一个缺失的工具调用ID
         let missing_call = contents[start..].iter().find_map(|item| {
             match item {
                 ContentItem::ToolResult { tool_call_id, .. } if
@@ -117,11 +120,13 @@ fn find_safe_start(contents: &[ContentItem], mut start: usize) -> usize {
                 _ => None,
             }
         });
-
+        
+        // 3. 如果没有缺失的工具调用ID，直接返回
         let Some(missing_call) = missing_call else {
             break;
         };
 
+        // 4. 从切割点之前的所有调用中找到缺失的工具调用ID的索引
         let Some(call_idx) = contents[..start]
             .iter()
             .position(|item| matches!(item,ContentItem::ToolCall { tool_call_id, .. } if tool_call_id == missing_call )) else {

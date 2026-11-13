@@ -8,13 +8,14 @@ use crate::{
 
 pub struct SlidingWindow {
     pub model: String,
-    pub token_threshold: usize,
-    pub window_size: usize,
+    pub token_threshold: usize,// 上下文阈值阈值
+    pub window_size: usize, // 滑动窗口大小
 }
 
 #[async_trait::async_trait]
 impl BeforeLlmCallback for SlidingWindow {
     async fn call(&self, _context: &mut ExecutionContext, request: &mut LlmRequest) {
+        // 如果上下文不足阈值，直接返回
         let before = count_tokens(&self.model, request);
         if before < self.token_threshold {
             return;
@@ -25,6 +26,7 @@ impl BeforeLlmCallback for SlidingWindow {
             return;
         }
 
+        // 找到最近一次用户消息的索引
         let user_idx = request
             .contents
             .iter()
@@ -49,3 +51,4 @@ impl BeforeLlmCallback for SlidingWindow {
         );
     }
 }
+ 

@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use crate::agent::{ContentItem, llm_request::LlmRequest};
+use crate::agent::{ ContentItem, llm_request::LlmRequest };
 
 pub struct Compaction {
-    pub keep_recent: usize,
+    pub keep_recent: usize, // 保留最近的N条不进行压缩
 }
 
 impl Compaction {
@@ -15,19 +15,10 @@ impl Compaction {
 
         for (idx, item) in request.contents.iter_mut().enumerate() {
             match item {
-                ContentItem::ToolCall {
-                    tool_call_id,
-                    arguments,
-                    ..
-                } => {
+                ContentItem::ToolCall { tool_call_id, arguments, .. } => {
                     call_args.insert(tool_call_id.clone(), arguments.clone());
                 }
-                ContentItem::ToolResult {
-                    tool_call_id,
-                    name,
-                    content,
-                    ..
-                } => {
+                ContentItem::ToolResult { tool_call_id, name, content, .. } => {
                     if idx >= protect_from {
                         continue;
                     }
@@ -35,17 +26,27 @@ impl Compaction {
                     let args = call_args.get(tool_call_id);
                     let replacement = match name.as_str() {
                         "read_file" => {
-                            let path = args.and_then(|a|a.get("file_path"))
-                            .and_then(Value::as_str)
-                            .unwrap_or("unknown");
+                            let path = args
+                                .and_then(|a| a.get("file_path"))
+                                .and_then(Value::as_str)
+                                .unwrap_or("unknown");
 
-                        Some(format!("File '{path}' was already read. Call read_file again if you need it."))
+                            Some(
+                                format!(
+                                    "File '{path}' was already read. Call read_file again if you need it."
+                                )
+                            )
                         }
                         "web_search" => {
-                            let query = args.and_then(|a|a.get("query"))
-                            .and_then(Value::as_str)
-                            .unwrap_or("unknown");
-                        Some(format!("Search results for '{query}' were already processed. Call web_search again if you need them."))
+                            let query = args
+                                .and_then(|a| a.get("query"))
+                                .and_then(Value::as_str)
+                                .unwrap_or("unknown");
+                            Some(
+                                format!(
+                                    "Search results for '{query}' were already processed. Call web_search again if you need them."
+                                )
+                            )
                         }
                         _ => None,
                     };
